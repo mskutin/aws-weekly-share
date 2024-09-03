@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud News Platformer - AWS News Edition (With Mocked Cloud Icon)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        #gameContainer {
+            flex: 1 1 600px;
+            min-width: 300px;
+            position: relative;
+        }
+        canvas {
+            border: 1px solid black;
+            max-width: 100%;
+            height: auto;
+        }
+        #infoPanel {
+            flex: 1 1 300px;
+            min-width: 300px;
+        }
+        #newsLog, #scoreBoard, #debugInfo, #playerCount, #connectionStatus {
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            overflow-y: auto;
+            max-height: 200px;
+        }
+        #scoreBoard, #playerCount {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        #pauseOverlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            display: none;
+        }
+        #connectionStatus {
+            font-weight: bold;
+        }
+        .online {
+            color: green;
+        }
+        .offline {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="pauseOverlay">PAUSED</div>
+    </div>
+    <div id="infoPanel">
+        <div id="scoreBoard">Score: 0</div>
+        <div id="playerCount">Players: 1</div>
+        <div id="connectionStatus" class="offline">Status: Offline</div>
+        <div id="newsLog">
+            <h3>Recent AWS News:</h3>
+            <ul id="newsList"></ul>
+        </div>
+        <div id="debugInfo"></div>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const debugInfo = document.getElementById('debugInfo');
+        const scoreBoard = document.getElementById('scoreBoard');
+        const newsList = document.getElementById('newsList');
+        const pauseOverlay = document.getElementById('pauseOverlay');
+        const playerCountDisplay = document.getElementById('playerCount');
+        const connectionStatus = document.getElementById('connectionStatus');
+
+        // WebSocket connection
+        let socket;
+        let isOnline = false;
+
+        function connectWebSocket() {
+            socket = new WebSocket('ws://names-pantyhose-remedy-societies.trycloudflare.com');
+
+            socket.onopen = function() {
+                isOnline = true;
+                connectionStatus.textContent = 'Status: Online';
+                connectionStatus.className = 'online';
+            };
+
+            socket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.type === 'playerCount') {
+                    playerCountDisplay.textContent = `Players: ${data.count}`;
+                }
+            };
+
+            socket.onclose = function() {
+                isOnline = false;
+                connectionStatus.textContent = 'Status: Offline (Retrying in 5s)';
+                connectionStatus.className = 'offline';
+                setTimeout(connectWebSocket, 5000);
+            };
+
+            socket.onerror = function() {
+                isOnline = false;
+                connectionStatus.textContent = 'Status: Connection Error';
+                connectionStatus.className = 'offline';
+            };
+        }
+
+        connectWebSocket();
+
+        // Close WebSocket connection when the window is closed
+        window.addEventListener('beforeunload', () => {
+            if (socket) {
+                socket.close();
+            }
+        });
+
+        // Game constants
+        const GAME_WIDTH = 800;
+        const GAME_HEIGHT = 600;
+        const CEILING = 50;
+        const GROUND = GAME_HEIGHT - 50;
+
+        // Game state
+        let isPaused = false;
+
+        // Performance monitoring
+        let lastTime = 0;
+        let fpsCounter = 0;
+        let fpsTimer = 0;
+
+        // Player
+        const player = {
+            x: 50,
+            y: GROUND - 50,
+            width: 30,
+            height: 50,
+            speed: 5,
+            velocityY: 0,
+            gravity: 0.4,
+            jumpStrength: -10,
+            score: 0,
+        };
+
+        // Clouds
+        const clouds = [];
+        const cloudWidth = 100;
+        const cloudHeight = 60;
+        const minCloudHeight = CEILING + cloudHeight;
+        const maxCloudHeight = GROUND - cloudHeight - 50;
+
+        // Mock cloud image
+        const cloudImage = {
+            width: 100,
+            height: 60
+        };
+
+        // Static news items
+        const newsItems = [
+            { title: "Amplify", description: "New function capabilities with scheduled cron jobs and streaming logs" },
+            { title: "AppConfig", description: "Deletion protection for additional guardrails" },
+            { title: "Backup", description: "Cross-Region backup with Neptune" },
+            { title: "Bedrock", description: "Cross-region inference and Knowledge Bases support for Llama 3.1" },
+            { title: "Braket", description: "Rigetti's 84-Qubit Ankaa™-2 system now available" },
+            { title: "Config", description: "Conformance packs available in 12 more Regions" },
+            { title: "Control Tower", description: "Organizational Units can contain up to 1,000 accounts" },
+            { title: "EC2", description: "Status checks now support reachability health of attached EBS volumes" },
+            { title: "EMR", description: "Managed Scaling is now Application Master placement aware" },
+            { title: "IoT SiteWise", description: "Models now support versioning" }
+        ];
+
+        function gameLoop(currentTime) {
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+            fpsCounter++;
+            fpsTimer += deltaTime;
+            if (fpsTimer >= 1000) {
+                debugInfo.textContent = `FPS: ${fpsCounter}\nObjects: ${clouds.length}`;
+                fpsCounter = 0;
+                fpsTimer = 0;
+            }
+
+            if (!isPaused) {
+                update(deltaTime / 1000);
+            }
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update(deltaTime) {
+            // Player movement
+            if (keys.ArrowLeft && player.x > 0) player.x -= player.speed;
+            if (keys.ArrowRight && player.x < GAME_WIDTH - player.width) player.x += player.speed;
+
+            // Player jump and gravity
+            player.velocityY += player.gravity;
+            player.y += player.velocityY;
+
+            // Ground collision
+            if (player.y > GROUND - player.height) {
+                player.y = GROUND - player.height;
+                player.velocityY = 0;
+            }
+
+            // Ceiling collision
+            if (player.y < CEILING) {
+                player.y = CEILING;
+                player.velocityY = 0;
+            }
+
+            // Generate clouds
+            if (clouds.length < 5 && Math.random() < 0.02) {
+                const newsItem = newsItems[Math.floor(Math.random() * newsItems.length)];
+                clouds.push({
+                    x: GAME_WIDTH,
+                    y: Math.random() * (maxCloudHeight - minCloudHeight) + minCloudHeight,
+                    title: newsItem.title,
+                    description: newsItem.description
+                });
+            }
+
+            // Move clouds and handle collision
+            for (let i = clouds.length - 1; i >= 0; i--) {
+                clouds[i].x -= 2;
+                if (clouds[i].x + cloudWidth < 0) {
+                    clouds.splice(i, 1);
+                    continue;
+                }
+
+                // Collision detection
+                if (player.x < clouds[i].x + cloudWidth &&
+                    player.x + player.width > clouds[i].x &&
+                    player.y < clouds[i].y + cloudHeight &&
+                    player.y + player.height > clouds[i].y) {
+                    addNewsToLog(`${clouds[i].title}: ${clouds[i].description}`);
+                    player.score++;
+                    updateScore();
+                    clouds.splice(i, 1);
+                }
+            }
+        }
+
+        function render() {
+            ctx.fillStyle = 'skyblue';
+            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillRect(0, 0, GAME_WIDTH, CEILING);
+
+            ctx.fillStyle = 'orange';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+
+            ctx.fillStyle = 'green';
+            ctx.fillRect(0, GROUND, GAME_WIDTH, GAME_HEIGHT - GROUND);
+
+            // Draw clouds
+            ctx.fillStyle = 'white';
+            for (let cloud of clouds) {
+                drawMockedCloud(cloud.x, cloud.y, cloudWidth, cloudHeight);
+                ctx.fillStyle = 'black';
+                ctx.font = '16px Arial';
+                ctx.fillText(cloud.title, cloud.x + 10, cloud.y + cloudHeight / 2);
+                ctx.fillStyle = 'white';
+            }
+
+            if (isPaused) {
+                pauseOverlay.style.display = 'block';
+            } else {
+                pauseOverlay.style.display = 'none';
+            }
+        }
+
+        function drawMockedCloud(x, y, width, height) {
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.moveTo(x, y + height / 2);
+            ctx.bezierCurveTo(x, y, x + width / 2, y - height / 2, x + width, y + height / 2);
+            ctx.bezierCurveTo(x + width, y + height, x + width / 2, y + height * 1.5, x, y + height / 2);
+            ctx.fill();
+        }
+
+        function addNewsToLog(news) {
+            const li = document.createElement('li');
+            li.textContent = news;
+            newsList.prepend(li);
+            if (newsList.children.length > 5) {
+                newsList.removeChild(newsList.lastChild);
+            }
+        }
+
+        function updateScore() {
+            scoreBoard.textContent = `Score: ${player.score}`;
+        }
+
+        const keys = {};
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'ArrowLeft') keys.ArrowLeft = true;
+            if (e.code === 'ArrowRight') keys.ArrowRight = true;
+            if (e.code === 'Space') player.velocityY = player.jumpStrength; // Unlimited jumps
+            if (e.code === 'KeyP') {
+                isPaused = !isPaused;
+                if (isPaused) {
+                    pauseOverlay.style.display = 'block';
+                } else {
+                    pauseOverlay.style.display = 'none';
+                }
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowLeft') keys.ArrowLeft = false;
+            if (e.code === 'ArrowRight') keys.ArrowRight = false;
+        });
+
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
