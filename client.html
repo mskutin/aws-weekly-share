@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloud News Platformer - AWS News Edition (With Mocked Cloud Icon)</title>
+    <title>CloudHop: AWS News Adventure</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -12,6 +12,7 @@
             display: flex;
             flex-wrap: wrap;
             gap: 20px;
+            background-color: #f0f8ff;
         }
         #gameContainer {
             flex: 1 1 600px;
@@ -19,24 +20,28 @@
             position: relative;
         }
         canvas {
-            border: 1px solid black;
+            border: 1px solid #4a90e2;
             max-width: 100%;
             height: auto;
+            box-shadow: 0 0 10px rgba(74, 144, 226, 0.3);
         }
         #infoPanel {
             flex: 1 1 300px;
             min-width: 300px;
         }
-        #newsLog, #scoreBoard, #debugInfo, #playerCount, #connectionStatus {
+        #newsLog, #scoreBoard, #debugInfo, #playerCount, #connectionStatus, #globalRecords, #activityLog {
             margin-bottom: 20px;
-            border: 1px solid #ccc;
+            border: 1px solid #4a90e2;
             padding: 10px;
             overflow-y: auto;
             max-height: 200px;
+            background-color: white;
+            box-shadow: 0 0 5px rgba(74, 144, 226, 0.2);
         }
         #scoreBoard, #playerCount {
             font-size: 24px;
             font-weight: bold;
+            color: #4a90e2;
         }
         #pauseOverlay {
             position: absolute;
@@ -58,9 +63,13 @@
         .offline {
             color: red;
         }
+        h1, h2, h3 {
+            color: #4a90e2;
+        }
     </style>
 </head>
 <body>
+    <h1>CloudHop: AWS News Adventure</h1>
     <div id="gameContainer">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
         <div id="pauseOverlay">PAUSED</div>
@@ -69,6 +78,14 @@
         <div id="scoreBoard">Score: 0</div>
         <div id="playerCount">Players: 1</div>
         <div id="connectionStatus" class="offline">Status: Offline</div>
+        <div id="globalRecords">
+            <h3>Global Top Scores:</h3>
+            <ol id="recordsList"></ol>
+        </div>
+        <div id="activityLog">
+            <h3>Player Activity:</h3>
+            <ul id="activityList"></ul>
+        </div>
         <div id="newsLog">
             <h3>Recent AWS News:</h3>
             <ul id="newsList"></ul>
@@ -80,28 +97,45 @@
         const ctx = canvas.getContext('2d');
         const debugInfo = document.getElementById('debugInfo');
         const scoreBoard = document.getElementById('scoreBoard');
+        const recordsList = document.getElementById('recordsList');
+        const activityList = document.getElementById('activityList');
         const newsList = document.getElementById('newsList');
         const pauseOverlay = document.getElementById('pauseOverlay');
         const playerCountDisplay = document.getElementById('playerCount');
         const connectionStatus = document.getElementById('connectionStatus');
+
+        // Cloud Compute related names
+        const playerNames = [
+            "EC2Explorer", "S3Surfer", "LambdaLeaper", "DynamoDBDiver", "RDSRacer",
+            "CloudFrontCruiser", "ElasticBeanstalkBouncer", "KinesisKnight", "SageMakerSprinter", "GlacierGlider"
+        ];
+
+        let playerName = playerNames[Math.floor(Math.random() * playerNames.length)];
 
         // WebSocket connection
         let socket;
         let isOnline = false;
 
         function connectWebSocket() {
-            socket = new WebSocket('wss://names-pantyhose-remedy-societies.trycloudflare.com');
+            socket = new WebSocket('ws://localhost:8080');
 
             socket.onopen = function() {
                 isOnline = true;
                 connectionStatus.textContent = 'Status: Online';
                 connectionStatus.className = 'online';
+                socket.send(JSON.stringify({ type: 'register', name: playerName }));
             };
 
             socket.onmessage = function(event) {
                 const data = JSON.parse(event.data);
                 if (data.type === 'playerCount') {
                     playerCountDisplay.textContent = `Players: ${data.count}`;
+                } else if (data.type === 'globalRecords') {
+                    updateGlobalRecords(data.records);
+                } else if (data.type === 'activityLog') {
+                    updateActivityLog(data.log);
+                } else if (data.type === 'welcome') {
+                    playerName = data.name;
                 }
             };
 
@@ -152,7 +186,7 @@
             velocityY: 0,
             gravity: 0.4,
             jumpStrength: -10,
-            score: 0,
+            score: 0
         };
 
         // Clouds
@@ -162,24 +196,14 @@
         const minCloudHeight = CEILING + cloudHeight;
         const maxCloudHeight = GROUND - cloudHeight - 50;
 
-        // Mock cloud image
-        const cloudImage = {
-            width: 100,
-            height: 60
-        };
-
-        // Static news items
+        // Static news items (replace with dynamic content from WebSocket if available)
         const newsItems = [
             { title: "Amplify", description: "New function capabilities with scheduled cron jobs and streaming logs" },
             { title: "AppConfig", description: "Deletion protection for additional guardrails" },
             { title: "Backup", description: "Cross-Region backup with Neptune" },
             { title: "Bedrock", description: "Cross-region inference and Knowledge Bases support for Llama 3.1" },
             { title: "Braket", description: "Rigetti's 84-Qubit Ankaa™-2 system now available" },
-            { title: "Config", description: "Conformance packs available in 12 more Regions" },
-            { title: "Control Tower", description: "Organizational Units can contain up to 1,000 accounts" },
-            { title: "EC2", description: "Status checks now support reachability health of attached EBS volumes" },
-            { title: "EMR", description: "Managed Scaling is now Application Master placement aware" },
-            { title: "IoT SiteWise", description: "Models now support versioning" }
+            // Add more news items as needed
         ];
 
         function gameLoop(currentTime) {
@@ -269,7 +293,7 @@
             // Draw clouds
             ctx.fillStyle = 'white';
             for (let cloud of clouds) {
-                drawMockedCloud(cloud.x, cloud.y, cloudWidth, cloudHeight);
+                drawCloud(cloud.x, cloud.y, cloudWidth, cloudHeight);
                 ctx.fillStyle = 'black';
                 ctx.font = '16px Arial';
                 ctx.fillText(cloud.title, cloud.x + 10, cloud.y + cloudHeight / 2);
@@ -283,8 +307,7 @@
             }
         }
 
-        function drawMockedCloud(x, y, width, height) {
-            ctx.fillStyle = 'white';
+        function drawCloud(x, y, width, height) {
             ctx.beginPath();
             ctx.moveTo(x, y + height / 2);
             ctx.bezierCurveTo(x, y, x + width / 2, y - height / 2, x + width, y + height / 2);
@@ -303,6 +326,27 @@
 
         function updateScore() {
             scoreBoard.textContent = `Score: ${player.score}`;
+            if (isOnline) {
+                socket.send(JSON.stringify({ type: 'updateScore', score: player.score }));
+            }
+        }
+
+        function updateGlobalRecords(records) {
+            recordsList.innerHTML = '';
+            records.forEach(record => {
+                const li = document.createElement('li');
+                li.textContent = `${record.name}: ${record.score}`;
+                recordsList.appendChild(li);
+            });
+        }
+
+        function updateActivityLog(log) {
+            activityList.innerHTML = '';
+            log.forEach(activity => {
+                const li = document.createElement('li');
+                li.textContent = activity;
+                activityList.appendChild(li);
+            });
         }
 
         const keys = {};
@@ -313,11 +357,7 @@
             if (e.code === 'Space') player.velocityY = player.jumpStrength; // Unlimited jumps
             if (e.code === 'KeyP') {
                 isPaused = !isPaused;
-                if (isPaused) {
-                    pauseOverlay.style.display = 'block';
-                } else {
-                    pauseOverlay.style.display = 'none';
-                }
+                pauseOverlay.style.display = isPaused ? 'block' : 'none';
             }
         });
 
