@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CloudHop: AWS News Adventure</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>CloudHop: AWS News Adventure</h1>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="pauseOverlay">PAUSED</div>
+    </div>
+    <div id="mobileControls">
+        <button id="leftButton" class="mobileButton">Left</button>
+        <button id="rightButton" class="mobileButton">Right</button>
+    </div>
+    <div id="infoPanel">
+        <div id="scoreBoard">Score: 0</div>
+        <div id="playerCount">Players: 1</div>
+        <div id="connectionStatus" class="offline">Status: Offline</div>
+        <div id="globalRecords">
+            <h3>Global Top Scores:</h3>
+            <ol id="recordsList"></ol>
+        </div>
+        <div id="activityLog">
+            <h3>Player Activity:</h3>
+            <ul id="activityList"></ul>
+        </div>
+        <div id="newsLog">
+            <h3>Recent AWS News:</h3>
+            <ul id="newsList"></ul>
+        </div>
+        <div id="debugInfo"></div>
+    </div>
+    <script src="engine.js"></script>
+</body>
+</html>

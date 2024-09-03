@@ -1,0 +1,91 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #f0f8ff;
+    touch-action: manipulation;
+}
+
+#gameContainer {
+    width: 100%;
+    max-width: 800px;
+    position: relative;
+}
+
+canvas {
+    border: 1px solid #4a90e2;
+    width: 100%;
+    height: auto;
+    box-shadow: 0 0 10px rgba(74, 144, 226, 0.3);
+}
+
+#infoPanel {
+    width: 100%;
+    max-width: 800px;
+    margin-top: 20px;
+}
+
+#newsLog, #scoreBoard, #debugInfo, #playerCount, #connectionStatus, #globalRecords, #activityLog {
+    margin-bottom: 10px;
+    border: 1px solid #4a90e2;
+    padding: 10px;
+    overflow-y: auto;
+    max-height: 150px;
+    background-color: white;
+    box-shadow: 0 0 5px rgba(74, 144, 226, 0.2);
+}
+
+#scoreBoard, #playerCount {
+    font-size: 20px;
+    font-weight: bold;
+    color: #4a90e2;
+}
+
+#pauseOverlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 36px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    display: none;
+}
+
+#connectionStatus {
+    font-weight: bold;
+}
+
+.online {
+    color: green;
+}
+
+.offline {
+    color: red;
+}
+
+h1, h2, h3 {
+    color: #4a90e2;
+    text-align: center;
+}
+
+#mobileControls {
+    display: none;
+    width: 100%;
+    max-width: 800px;
+    margin-top: 10px;
+}
+
+.mobileButton {
+    width: 48%;
+    padding: 15px;
+    font-size: 20px;
+    background-color: #4a90e2;
+    color: white;
+    border: none;
+    border-radius: 5px;
+}
