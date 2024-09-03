@@ -34,7 +34,7 @@ let socket;
 let isOnline = false;
 
 function connectWebSocket() {
-    socket = new WebSocket('wss://names-pantyhose-remedy-societies.trycloudflare.com');
+    socket = new WebSocket('wss://travels-compounds-volt-storage.trycloudflare.com');
 
     socket.onopen = function() {
         isOnline = true;
